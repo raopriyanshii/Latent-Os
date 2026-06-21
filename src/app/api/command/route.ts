@@ -9,7 +9,11 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({
       success: true,
-      result: { action: "notify", target: "notion", parameters: { message: "Command processed" } },
+      result: {
+        action: "notify",
+        target: "notion",
+        parameters: { message: "Command processed successfully" },
+      },
     })
   }
 }

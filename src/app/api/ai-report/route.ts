@@ -6,11 +6,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const { context } = body
+
     const report = await generateAIReport(
       context || "Generate a daily startup report with wins, blockers, velocity, and launch readiness score."
     )
+
     const parsed = JSON.parse(report)
     await saveDailyReport({ ...parsed, date: new Date().toISOString() })
+
     return NextResponse.json({ success: true, report: parsed })
   } catch (error) {
     console.error("AI report error:", error)
