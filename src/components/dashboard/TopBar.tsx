@@ -35,17 +35,21 @@ export function TopBar({ activeModule }: TopBarProps) {
           <Zap className="w-3 h-3 text-purple-400" />
           <span className="text-xs text-purple-300 font-medium">AI Active</span>
         </div>
+
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-500/10 border border-green-500/30">
           <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
           <span className="text-xs text-green-300 font-medium hidden sm:block">Notion Synced</span>
         </div>
+
         <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors">
           <GitBranch className="w-4 h-4" />
         </button>
+
         <button className="relative w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors">
           <Bell className="w-4 h-4" />
           <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-purple-500 rounded-full" />
         </button>
+
         <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors">
           <Settings className="w-4 h-4" />
         </button>
