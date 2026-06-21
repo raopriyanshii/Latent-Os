@@ -78,21 +78,25 @@ ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bottleneck_predictions ENABLE ROW LEVEL SECURITY;
 
--- Public policies
+-- Public read policies (adjust for auth in production)
 CREATE POLICY "Public read" ON knowledge_nodes FOR SELECT USING (true);
 CREATE POLICY "Public insert" ON knowledge_nodes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public upsert" ON knowledge_nodes FOR UPDATE USING (true);
+
 CREATE POLICY "Public read" ON daily_reports FOR SELECT USING (true);
 CREATE POLICY "Public insert" ON daily_reports FOR INSERT WITH CHECK (true);
+
 CREATE POLICY "Public read" ON meetings FOR SELECT USING (true);
 CREATE POLICY "Public insert" ON meetings FOR INSERT WITH CHECK (true);
+
 CREATE POLICY "Public read" ON team_snapshots FOR SELECT USING (true);
 CREATE POLICY "Public insert" ON team_snapshots FOR INSERT WITH CHECK (true);
+
 CREATE POLICY "Public read" ON bottleneck_predictions FOR SELECT USING (true);
 CREATE POLICY "Public insert" ON bottleneck_predictions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update" ON bottleneck_predictions FOR UPDATE USING (true);
 
--- Indexes
+-- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_knowledge_nodes_type ON knowledge_nodes(type);
 CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(date DESC);
 CREATE INDEX IF NOT EXISTS idx_meetings_date ON meetings(date DESC);
