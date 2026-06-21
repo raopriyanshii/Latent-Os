@@ -107,6 +107,11 @@ body {
   100% { transform: translateY(400px); }
 }
 
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
 .animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
 .animate-float { animation: float 4s ease-in-out infinite; }
 .animate-scan { animation: scan 3s linear infinite; }
