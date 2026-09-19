@@ -1,0 +1,147 @@
+// FraudGraph Investigator — TigerGraph schema
+//
+// Base schema follows the HHGOA_IEEE README's suggested schema exactly
+// (Customer, Card, Transaction, DeviceProfile, EmailDomain, BillingRegion,
+// ClosedCase), extended with a Case vertex so the agent's own investigations
+// become case memory for later runs, as the policy (section 3a) requires.
+//
+// Column choices trace directly to docs/DATA_DICTIONARY.md. Attributes not
+// individually named by Vesta (V1-V339, C1-C14, D1-D15, M1-M9, id_01-id_11,
+// most id_12-id_38) are stored as raw numeric/string signals on Transaction,
+// never asserted to mean something the dataset doesn't document.
+
+CREATE GRAPH FraudGraph_Investigator (*)
+
+USE GRAPH FraudGraph_Investigator
+
+// ---------------------------------------------------------------------------
+// VERTICES
+// ---------------------------------------------------------------------------
+
+CREATE VERTEX Customer (
+  PRIMARY_ID customer_id STRING     // e.g. "C01234"
+) WITH primary_id_as_attribute="true"
+
+CREATE VERTEX Card (
+  PRIMARY_ID card_id STRING,        // e.g. "C01234-K1"
+  card4 STRING,                     // network: visa / mastercard / american express / discover
+  card6 STRING,                     // type: credit / debit
+  card1 STRING,                     // issuer code (unnamed individually)
+  card2 STRING,
+  card3 STRING,
+  card5 STRING
+) WITH primary_id_as_attribute="true"
+
+CREATE VERTEX Transaction (
+  PRIMARY_ID transaction_id STRING, // TransactionID
+  transaction_dt UINT,              // seconds from dataset start
+  ts DATETIME,                      // real timestamp, added column
+  transaction_amt DOUBLE,
+  product_cd STRING,                // W, C, H, R, S
+  channel STRING,                   // in_person | online
+  risk_score DOUBLE,                // 0-1, input signal only, never a verdict
+  addr1 STRING,                     // billing region code
+  addr2 STRING,                     // billing country code
+  dist1 DOUBLE,
+  dist2 DOUBLE,
+  p_emaildomain STRING,
+  r_emaildomain STRING,
+  // Vesta engineered / count / delta / match features: stored as JSON blobs
+  // rather than 14+15+9+339 individual columns, to keep the schema legible.
+  // Backend tools deserialize these on read; GSQL queries treat them as
+  // opaque evidence attributes, never as named, understood features.
+  c_features STRING,                // JSON: {"C1": ..., ..., "C14": ...}
+  d_features STRING,                // JSON: {"D1": ..., ..., "D15": ...}
+  m_features STRING,                // JSON: {"M1": ..., ..., "M9": ...}
+  v_features STRING                 // JSON: {"V1": ..., ..., "V339": ...}
+) WITH primary_id_as_attribute="true"
+
+CREATE VERTEX DeviceProfile (
+  PRIMARY_ID device_profile_id STRING, // hash of DeviceInfo+id_30+id_31+id_33
+  device_info STRING,                  // e.g. "SAMSUNG SM-G935F Build/NRD90M"
+  os STRING,                           // id_30
+  browser STRING,                      // id_31
+  screen STRING,                       // id_33
+  device_type STRING                   // mobile | desktop
+) WITH primary_id_as_attribute="true"
+
+CREATE VERTEX EmailDomain (
+  PRIMARY_ID domain STRING
+) WITH primary_id_as_attribute="true"
+
+CREATE VERTEX BillingRegion (
+  PRIMARY_ID addr1 STRING
+) WITH primary_id_as_attribute="true"
+
+CREATE VERTEX ClosedCase (
+  PRIMARY_ID case_id STRING,        // e.g. "CC-0001"
+  customer_id STRING,
+  card_id STRING,
+  opened_at DATETIME,
+  closed_at DATETIME,
+  outcome STRING,                   // confirmed_fraud | cleared
+  pattern STRING,                   // one of the five, undocumented, or none
+  first_fraud_txn_id STRING,
+  n_txns UINT,
+  exposure_usd DOUBLE,
+  report_filed BOOL,
+  analyst_notes STRING
+) WITH primary_id_as_attribute="true"
+
+// Cases this agent opens. Written back so future investigations retrieve
+// them as memory, per policy section 3a.
+CREATE VERTEX Case (
+  PRIMARY_ID graph_case_id STRING,  // e.g. "CASE-2016-1187"
+  source_case_id STRING,            // HHG-xxx case_pack id
+  status STRING,                    // open | closed_fraud | closed_legitimate | escalated
+  verdict STRING,                   // fraud | legitimate | uncertain
+  fraud_probability DOUBLE,
+  pattern STRING,
+  pattern_description STRING,
+  exposure_usd DOUBLE,
+  summary STRING,
+  created_at DATETIME,
+  updated_at DATETIME
+) WITH primary_id_as_attribute="true"
+
+// ---------------------------------------------------------------------------
+// EDGES
+// ---------------------------------------------------------------------------
+
+CREATE UNDIRECTED EDGE OWNS (FROM Customer, TO Card)
+
+CREATE DIRECTED EDGE MADE (FROM Card, TO Transaction) WITH REVERSE_EDGE="MADE_BY"
+
+CREATE DIRECTED EDGE FROM_DEVICE (FROM Transaction, TO DeviceProfile)
+  WITH REVERSE_EDGE="DEVICE_USED_IN"
+  // online transactions only, from identity.csv; id_15 (New/Found) and
+  // id_23 (proxy) carried as edge attributes since they describe this
+  // specific transaction's use of the device, not the device itself
+  (
+    id_15 STRING,   // New | Found | Unknown
+    id_23 STRING    // proxy status, blank if none
+  )
+
+CREATE DIRECTED EDGE PURCHASER_EMAIL (FROM Transaction, TO EmailDomain)
+  WITH REVERSE_EDGE="EMAIL_USED_IN"
+
+CREATE DIRECTED EDGE BILLED_IN (FROM Transaction, TO BillingRegion)
+  WITH REVERSE_EDGE="REGION_TXNS"
+
+CREATE DIRECTED EDGE NEXT (FROM Transaction, TO Transaction)
+  WITH REVERSE_EDGE="PREV"
+  // ordered by ts within a card, per README suggested schema
+
+CREATE UNDIRECTED EDGE INVOLVES (FROM ClosedCase, TO Transaction)
+CREATE UNDIRECTED EDGE ON_CARD (FROM ClosedCase, TO Card)
+CREATE UNDIRECTED EDGE CONNECTED_TO (FROM ClosedCase, TO Card)
+CREATE UNDIRECTED EDGE SEEN_ON_DEVICE (FROM ClosedCase, TO DeviceProfile)
+
+// New Case (this agent's output) edges, mirroring ClosedCase's shape so
+// case-similarity queries can traverse both uniformly.
+CREATE UNDIRECTED EDGE CASE_INVOLVES (FROM Case, TO Transaction)
+CREATE UNDIRECTED EDGE CASE_ON_CARD (FROM Case, TO Card)
+CREATE UNDIRECTED EDGE CASE_CONNECTED_TO (FROM Case, TO Card)
+CREATE UNDIRECTED EDGE CASE_SEEN_ON_DEVICE (FROM Case, TO DeviceProfile)
+CREATE UNDIRECTED EDGE SIMILAR_TO (FROM Case, TO ClosedCase) WITH REVERSE_EDGE="SIMILAR_TO"
+  (similarity_score DOUBLE, matched_on STRING)

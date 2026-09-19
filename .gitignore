@@ -1,0 +1,28 @@
+# Raw transaction data is too large for git (~708MB, exceeds GitHub's 100MB
+# limit). Kept on local disk only; see data/README.md for how to obtain it.
+data/transactions.csv
+data/transactions_part_*.csv
+data/transactions_header.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.local
+
+# Logs
+logs/*.log
+
+# OS
+.DS_Store
